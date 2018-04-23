@@ -7,6 +7,7 @@ using System.Linq;
 using System.ServiceProcess;
 using System.Text;
 using System.Threading.Tasks;
+using System.Configuration;
 
 namespace OptimaExportImportForPresta
 {
@@ -23,6 +24,13 @@ namespace OptimaExportImportForPresta
 
         protected override void OnStop()
         {
+        }
+
+        public  void Process()
+        {
+            ComarchOptimaImportOrder comarchOptimaImportOrder =new ComarchOptimaImportOrder();
+            EventLog eventLog = new EventLog();
+            comarchOptimaImportOrder.ComarchOptimaImportOrderStart(eventLog);
         }
     }
 }
