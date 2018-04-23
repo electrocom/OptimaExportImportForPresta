@@ -1,0 +1,54 @@
+﻿<?xml version='1.0' encoding='utf-8'?>
+<SettingsFile xmlns="http://schemas.microsoft.com/VisualStudio/2004/01/settings" CurrentProfile="(Default)" GeneratedClassNamespace="OptimaExportImportForPresta.Properties" GeneratedClassName="Settings">
+  <Profiles />
+  <Settings>
+    <Setting Name="erpLogin" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">ADMIN</Value>
+    </Setting>
+    <Setting Name="erpPasswd" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Tomax@123</Value>
+    </Setting>
+    <Setting Name="erpName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">Tomax</Value>
+    </Setting>
+    <Setting Name="erpSrc" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">C:\Program Files (x86)\Comarch ERP Optima</Value>
+    </Setting>
+    <Setting Name="ordersGate" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://www.majsterkowanie.eu/modules/crud/ordersxml.php</Value>
+    </Setting>
+    <Setting Name="serverName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">MSSQLNEW</Value>
+    </Setting>
+    <Setting Name="dataBaseName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">CDN_Tomax</Value>
+    </Setting>
+    <Setting Name="userName" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">sa</Value>
+    </Setting>
+    <Setting Name="secret" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">ZAQ!2wsx</Value>
+    </Setting>
+    <Setting Name="twrIdException" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">93449</Value>
+    </Setting>
+    <Setting Name="twrIdCarrier" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">93450</Value>
+    </Setting>
+    <Setting Name="metodaDostawyKod" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">METODADOSTAWY</Value>
+    </Setting>
+    <Setting Name="metodaPlatnosci" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">METODAPLATNOSCI</Value>
+    </Setting>
+    <Setting Name="apiUrl" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://www.majsterkowanie.eu/api/</Value>
+    </Setting>
+    <Setting Name="apiKey" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">SA5DK6NTFPUEMQZMWCNP4QI26U1IEZ51</Value>
+    </Setting>
+    <Setting Name="Interval" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">1</Value>
+    </Setting>
+  </Settings>
+</SettingsFile>

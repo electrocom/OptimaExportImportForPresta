@@ -12,14 +12,23 @@ namespace OptimaExportImportForPresta
         /// <summary>
         /// Główny punkt wejścia dla aplikacji.
         /// </summary>
-        static void Main()
-        {
-            ServiceBase[] ServicesToRun;
-            ServicesToRun = new ServiceBase[]
-            {
-                new Service1()
-            };
-            ServiceBase.Run(ServicesToRun);
-        }
+        
+          static void Main()
+    {
+#if (!DEBUG)
+           ServiceBase[] ServicesToRun;
+           ServicesToRun = new ServiceBase[] 
+	   { 
+	        new b2bImport() 
+	   };
+           ServiceBase.Run(ServicesToRun);
+#else
+            b2bImport myServ = new b2bImport();
+           myServ.Process();
+           // here Process is my Service function
+           // that will run when my service onstart is call
+           // you need to call your own method or function name here instead of Process();
+         #endif
+    }
     }
 }

@@ -1,6 +1,6 @@
 ﻿namespace OptimaExportImportForPresta
 {
-    partial class Service1
+    partial class b2bImport
     {
         /// <summary> 
         /// Wymagana zmienna projektanta.
@@ -28,8 +28,11 @@
         /// </summary>
         private void InitializeComponent()
         {
-            components = new System.ComponentModel.Container();
-            this.ServiceName = "Service1";
+            // 
+            // b2bImport
+            // 
+            this.ServiceName = "b2bImport";
+
         }
 
         #endregion
