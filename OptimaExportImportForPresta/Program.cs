@@ -19,11 +19,11 @@ namespace OptimaExportImportForPresta
            ServiceBase[] ServicesToRun;
            ServicesToRun = new ServiceBase[] 
 	   { 
-	        new Service1() 
+	        new b2bImport() 
 	   };
            ServiceBase.Run(ServicesToRun);
 #else
-            Service1 myServ = new Service1();
+            b2bImport myServ = new b2bImport();
            myServ.Process();
            // here Process is my Service function
            // that will run when my service onstart is call
