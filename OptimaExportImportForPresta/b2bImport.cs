@@ -30,12 +30,9 @@ namespace OptimaExportImportForPresta
         private static void OnTimedEvent(Object source, System.Timers.ElapsedEventArgs e)
         {
             ComarchOptimaImportOrder comarchOptimaImportOrder = new ComarchOptimaImportOrder();
-            EventLog eventLog = new EventLog();
+           
 
-
-            eventLog.Source = "IntegracjaB2B";
-
-            comarchOptimaImportOrder.ComarchOptimaImportOrderStart(eventLog);
+            comarchOptimaImportOrder.ComarchOptimaImportOrderStart();
         }
 
         public  void Process()
@@ -50,24 +47,10 @@ namespace OptimaExportImportForPresta
            
             _timer.Elapsed += OnTimedEvent;
 
-            // Create the source, if it does not already exist.
-            if (!EventLog.SourceExists("IntegracjaB2B"))
-            {
-                //An event log source should not be created and immediately used.
-                //There is a latency time to enable the source, it should be created
-                //prior to executing the application that uses the source.
-                //Execute this sample a second time to use the new source.
-                EventLog.CreateEventSource("IntegracjaB2B", "IntegracjaB2Blog");
-              
-            }
-
+           
             ComarchOptimaImportOrder comarchOptimaImportOrder = new ComarchOptimaImportOrder();
-            EventLog eventLog = new EventLog();
+            comarchOptimaImportOrder.ComarchOptimaImportOrderStart();
 
-
-            eventLog.Source = "IntegracjaB2B";
-
-            comarchOptimaImportOrder.ComarchOptimaImportOrderStart(eventLog);
 #if (DEBUG)
             while (true) ;
 #endif

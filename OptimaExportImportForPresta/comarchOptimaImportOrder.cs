@@ -16,14 +16,16 @@ using System.Configuration;
 using System.Collections.Specialized;
 using System.Data.SqlClient;
 using System.Text.RegularExpressions;
+using NIP24;
 namespace OptimaExportImportForPresta
 {
     class ComarchOptimaImportOrder
     {
-
+        static EventLog eventLog;
         static IApplication Application = null;
         static ILogin Login = null;
-        static string connectionString; 
+        static string connectionString;
+        static XmlNode curOrderXML;
         public  ComarchOptimaImportOrder()
         {
             connectionString = "Data Source=" + Properties.Settings.Default.serverName + ";" +
@@ -68,8 +70,8 @@ namespace OptimaExportImportForPresta
         }
 
 
-        [STAThread]
-        private void comarchOptimaImportOrderSTA(EventLog eventLog)
+    [STAThread]
+        private void comarchOptimaImportOrderSTA()
         {
             string akronim;
 
@@ -83,7 +85,7 @@ namespace OptimaExportImportForPresta
                 try
                 {
                     NameValueCollection postData = new NameValueCollection() { { "action", "getXmlOrders" } };
-                    prestaResponse = Encoding.UTF8.GetString(client.UploadValues(Properties.Settings.Default.ordersGate, postData));
+                    prestaResponse = Encoding.UTF8.GetString(client.UploadValues(getOrdersGate(), postData));
                 }
                 catch (Exception exPresta)
                 {
@@ -107,8 +109,9 @@ namespace OptimaExportImportForPresta
                             Dictionary<string, List<XmlNode>> splitedOrder = new Dictionary<string, List<XmlNode>>();
                             orderId = orderXML["id"].InnerText;
                             reference= orderXML["reference"].InnerText;
+                            curOrderXML = orderXML;
 
-                           if( CzyZaimportowane(reference)) //Jeśłi zamówienie zaimportowane to przerywam.
+                           if ( CzyZaimportowane(reference)) //Jeśłi zamówienie zaimportowane to przerywam.
                            continue;
 
                                 XmlNode tmpNode = orderXML["associations"];
@@ -122,7 +125,7 @@ namespace OptimaExportImportForPresta
                                     XmlNode xmlBilling = orderXML.SelectSingleNode("address_invoice")["address"];
                                     XmlNode xmlShipping = orderXML.SelectSingleNode("address_delivery")["address"];
                                     XmlNode xmlCustomer = orderXML.SelectSingleNode("customer");
-                                    XmlNode xmlCarrier = orderXML.SelectSingleNode("carrier");
+                                    XmlNode xmlCarrier = orderXML.SelectSingleNode("carrier"); 
                                 try
                                     {
                                        
@@ -139,10 +142,6 @@ namespace OptimaExportImportForPresta
                                         SqlDataReader reader = idKnt.ExecuteReader();
                                         int podmiotId = 0;
 
-                                        akronim = "B2B_"+xmlBilling["id"].InnerText+"_" ;
-                                        if (xmlBilling["company"].InnerText.Length > 0)
-                                            akronim += xmlBilling["company"].InnerText.Replace(" ", "");
-                                        akronim += xmlBilling["lastname"].InnerText ;
 
                                     try { 
                                         if (reader.Read())
@@ -150,11 +149,12 @@ namespace OptimaExportImportForPresta
                                             knt = Sesja.CreateObject("CDN.Kontrahenci").Item("Knt_kntid=" + podmiotId);
                                         }
                                         else
-                                        { podmiotId = 0;
+                                        {
+                                            podmiotId = 0;
 
                                             try
                                             {
-                                                knt = Sesja.CreateObject("CDN.Kontrahenci").Item("Knt_Kod='" + akronim + "'");
+                                                knt = Sesja.CreateObject("CDN.Kontrahenci").Item("Knt_Kod='" + ZbudujAkronim(curOrderXML) + "'");
                                             }catch (Exception ex)
                                             {
                                                 knt = null;
@@ -163,52 +163,10 @@ namespace OptimaExportImportForPresta
                                             if (knt==null)
                                             {
                                                 knt = Sesja.CreateObject("CDN.Kontrahenci").AddNew();
-                                                knt.Akronim = akronim;
+                                                knt.Akronim = ZbudujAkronim(curOrderXML); ;
                                                 knt.Rodzaj_Odbiorca = 1;
                                                 knt.Rodzaj_Dostawca = 0;
-                                                if (xmlBilling["company"].InnerText.Length>2) {
-                                                    knt.Nazwa1 = xmlBilling["company"].InnerText;
-                                                    knt.Nazwa2 = xmlBilling["firstname"].InnerText + " " + xmlBilling["lastname"].InnerText;
-                                                  // knt.
-                                                }
-                                                else {
-                                                    knt.Nazwa1 = xmlBilling["firstname"].InnerText + " " + xmlBilling["lastname"].InnerText;
-                                                }
-
-                                                knt.Adres.Ulica = xmlBilling["address1"].InnerText;
-                                                knt.Adres.NrDomu = xmlBilling["address2"].InnerText;
-                                                knt.Adres.Miasto = xmlBilling["city"].InnerText;
-                                                knt.Adres.KodPocztowy = xmlBilling["postcode"].InnerText;
-                                                knt.Adres.Kraj = "Polska";
-
-                                                if (xmlCustomer["email"].InnerText.Length > 2)
-                                                    knt.Email = xmlCustomer["email"].InnerText;
-
-                                                if (xmlBilling["phone"].InnerText.Length > 5)
-                                                    knt.Telefon = xmlBilling["phone"].InnerText;
-
-                                                if (xmlBilling["company"].InnerText.Length > 0)
-
-                                                    knt.Nazwa1 = xmlBilling["company"].InnerText;
-
-                                                if (xmlBilling["address1"].InnerText.Length > 0)
-                                                {
-                                                    knt.Adres.Ulica = xmlBilling["address1"].InnerText;
-
-                                                }
-
-                                                knt.Adres.Kraj = "Polska";
-                                                var nip = xmlBilling["vat_number"].InnerText.Replace(" ", "").Replace("-", "");
-
-                                                if (NIPValidate(nip))
-                                                knt.Nip = nip;
-                                                else
-                                                eventLog.WriteEntry("Błędny nip: " + xmlBilling["vat_number"].InnerText+" dla zamówienia nr: " + orderId + Environment.NewLine , EventLogEntryType.Warning, 0);
-
-                                                if (xmlBilling["postcode"].InnerText.Length > 0)
-                                                    knt.Adres.KodPocztowy = xmlBilling["postcode"].InnerText;
-                                                if (xmlBilling["city"].InnerText.Length > 0)
-                                                    knt.Adres.Miasto = xmlBilling["city"].InnerText;
+                                                PobierzDaneDoFaktury(xmlBilling,knt);
                                                 KntAtrybut b2bId = knt.Atrybuty.AddNew();
                                                 b2bId.DefAtrybut = defAtrybut;
                                                 b2bId.ROSaveMode = 1;
@@ -261,13 +219,13 @@ namespace OptimaExportImportForPresta
                                         dok.OdbAdres.Miasto = xmlShipping["city"].InnerText;
                                         dok.OdbAdres.KodPocztowy = xmlShipping["postcode"].InnerText;
                                         dok.OdbAdres.Kraj = "Polska";
-                                        //dok.OdbAdres.Wojewodztwo = xmlShipping["Region"].InnerText;
+                                        //dok.OdbAdres.Wojewodztwo = xmlShipping["Region"].InnerText; 
                                        DokAtrybut dostawa = dok.Atrybuty.AddNew();
-                                         dostawa.Kod = "METODADOSTAWY";
+                                        dostawa.Kod = "METODADOSTAWY";
                                         dostawa.Wartosc = xmlCarrier["name"].InnerText;
                                         DokAtrybut platnosc = dok.Atrybuty.AddNew();
                                         platnosc.Kod = "METODAPLATNOSCI";
-                                    platnosc.Wartosc = orderXML["payment"].InnerText;
+                                        platnosc.Wartosc = orderXML["payment"].InnerText;
 
                                     DokAtrybut b2bIdDok = dok.Atrybuty.AddNew();
                                     b2bIdDok.Kod = "B2BID";
@@ -377,6 +335,147 @@ namespace OptimaExportImportForPresta
 
         }
 
+        public void PobierzDaneDoFakturyGus( Kontrahent knt)
+        {
+            string nip = knt.Nip;
+            NIP24Client nip24 = new NIP24Client(Properties.Settings.Default.nip24Id, Properties.Settings.Default.nip24Key);
+            AccountStatus account = nip24.GetAccountStatus();
+            if (account != null)
+            {
+                eventLog.WriteEntry("Nip24 konto użytkownika: " + account + Environment.NewLine, EventLogEntryType.Information, 0);
+            }
+            else
+            {
+                eventLog.WriteEntry("Nip24 błąd: " + nip24.LastError + Environment.NewLine, EventLogEntryType.Information, 0);
+            }
+
+
+            // Sprawdzenie statusu fimy
+            bool active = nip24.IsActive(Number.NIP, nip);
+
+            if (active)
+            {
+                Console.WriteLine("Firma prowadzi aktywną działalność");
+                eventLog.WriteEntry("Firma prowadzi aktywną działalność " + Environment.NewLine, EventLogEntryType.Information, 0);
+            }
+            else
+            {
+                if (String.IsNullOrEmpty(nip24.LastError))
+                {
+                    eventLog.WriteEntry("Firma zawiesiła lub zakończyła działalność " + Environment.NewLine, EventLogEntryType.Warning, 0);
+                    //   Console.WriteLine("Firma zawiesiła lub zakończyła działalność");
+                }
+                else
+                {
+                    eventLog.WriteEntry("Błąd: " + nip24.LastError + Environment.NewLine, EventLogEntryType.Error, 0);
+                    //Console.WriteLine("Błąd: " + nip24.LastError);
+                }
+            }
+
+
+            InvoiceData invoice = nip24.GetInvoiceData(Number.NIP, nip, false);
+
+            if (invoice != null)
+            {
+               // Console.WriteLine("Nazwa: " + invoice.Name);
+                knt.Nazwa1 = invoice.Name;
+                knt.Adres.KodPocztowy = invoice.PostCode;
+                knt.Adres.Miasto = invoice.PostCity;
+                knt.Adres.Ulica = invoice.Street;
+                knt.Adres.NrDomu = invoice.StreetNumber;
+                knt.Adres.NrLokalu = invoice.HouseNumber;
+                            }
+            else
+            {
+                // Console.WriteLine("Błąd: " + nip24.LastError);
+                eventLog.WriteEntry("Błąd pobierania danych do faktury z GUS: " + nip24.LastError + Environment.NewLine, EventLogEntryType.Error, 0);
+            }
+
+           
+
+        }
+
+        public  void ZbudujDaneDoFaktury(XmlNode xmlBilling, Kontrahent knt)
+        {
+            //Ustalanie nazwy kontahenta
+            if (xmlBilling["company"].InnerText.Length > 2)
+            {
+                knt.Nazwa1 = xmlBilling["company"].InnerText;
+                knt.Nazwa2 = xmlBilling["firstname"].InnerText + " " + xmlBilling["lastname"].InnerText;
+
+            }
+            else
+            {
+                knt.Nazwa1 = xmlBilling["firstname"].InnerText + " " + xmlBilling["lastname"].InnerText;
+            }
+
+            knt.Adres.Ulica = xmlBilling["address1"].InnerText;
+            knt.Adres.NrDomu = xmlBilling["address2"].InnerText;
+            knt.Adres.Miasto = xmlBilling["city"].InnerText;
+            knt.Adres.KodPocztowy = xmlBilling["postcode"].InnerText;
+            knt.Adres.Kraj = "Polska";
+
+            //  if (xmlCustomer["email"].InnerText.Length > 2)
+            //  knt.Email = xmlCustomer["email"].InnerText;
+
+            if (xmlBilling["phone"].InnerText.Length > 5)
+                knt.Telefon = xmlBilling["phone"].InnerText;
+
+            if (xmlBilling["company"].InnerText.Length > 0)
+                knt.Nazwa1 = xmlBilling["company"].InnerText;
+
+            if (xmlBilling["address1"].InnerText.Length > 0)
+            {
+                knt.Adres.Ulica = xmlBilling["address1"].InnerText;
+            }
+
+            knt.Adres.Kraj = "Polska";
+            if (xmlBilling["postcode"].InnerText.Length > 0)
+                knt.Adres.KodPocztowy = xmlBilling["postcode"].InnerText;
+            if (xmlBilling["city"].InnerText.Length > 0)
+                knt.Adres.Miasto = xmlBilling["city"].InnerText;
+
+        }
+        public void PobierzDaneDoFaktury(XmlNode xmlBilling, Kontrahent knt)
+        {
+            var nip = NIPClean(xmlBilling["vat_number"].InnerText);
+
+            if (xmlBilling["company"].InnerText.Length > 2)
+            {
+                if (NIPValidate(nip))
+                {
+                    knt.Nip = nip;
+                    PobierzDaneDoFakturyGus(knt);
+                }
+                else
+                {
+                    eventLog.WriteEntry("Błędny nip firmy: " + xmlBilling["vat_number"].InnerText + Environment.NewLine, EventLogEntryType.Warning, 0);
+                    ZbudujDaneDoFaktury(xmlBilling, knt);
+                }
+            }
+            else
+            {
+                ZbudujDaneDoFaktury(xmlBilling, knt);
+            }
+        }
+        public string ZbudujAkronim(XmlNode orderXML)
+        {
+            string akronim="";
+            XmlNode xmlBilling = orderXML.SelectSingleNode("address_invoice")["address"];        
+            XmlNode xmlCustomer = orderXML.SelectSingleNode("customer");
+         
+            string allegro = xmlCustomer["note"].InnerText.Split(':')[1].Trim();
+
+            akronim = "B2B_" + xmlBilling["id"].InnerText+"_"+ allegro + "_";
+            if (xmlBilling["company"].InnerText.Length > 0)
+                akronim += xmlBilling["company"].InnerText.Replace(" ", "");
+
+            akronim += xmlBilling["lastname"].InnerText;
+          
+
+            return akronim;
+        }
+
         public string NIPClean(string nip)
         {
             return Regex.Replace(nip, @"[^\d]", "");
@@ -403,14 +502,14 @@ namespace OptimaExportImportForPresta
         {
             WebClient client = new WebClient();
             client.UseDefaultCredentials = true;
-            client.Credentials = new NetworkCredential(Properties.Settings.Default.apiKey, "");
+            client.Credentials = new NetworkCredential(getapiKey(), "");
             string prestaResponse = "";
             var xml = "<prestashop><optimaexportorder><id>" + id_optimaexportorders.ToString()+ "</id><id_order>687</id_order><export>1</export><id_optimaexportorders>" + id_optimaexportorders.ToString() + "</id_optimaexportorders></optimaexportorder></prestashop>";
 
             try
             {
                 NameValueCollection postData = new NameValueCollection() { { "data", xml } };
-                prestaResponse = Encoding.UTF8.GetString(client.UploadData(Properties.Settings.Default.apiUrl +"optimaexportorders/" + id_optimaexportorders.ToString(), "PUT", Encoding.ASCII.GetBytes(xml)));
+                prestaResponse = Encoding.UTF8.GetString(client.UploadData(getApiUrl() + "optimaexportorders/" + id_optimaexportorders.ToString(), "PUT", Encoding.ASCII.GetBytes(xml)));
             }
             catch (Exception exPresta)
             {
@@ -453,11 +552,59 @@ namespace OptimaExportImportForPresta
 
         }
 
-        public void ComarchOptimaImportOrderStart(EventLog eventLog)
+        public void ComarchOptimaImportOrderStart()
         {
-            this.comarchOptimaImportOrderSTA(eventLog);
+            // Create the source, if it does not already exist.
+            if (!EventLog.SourceExists("IntegracjaB2B"))
+            {
+                //An event log source should not be created and immediately used.
+                //There is a latency time to enable the source, it should be created
+                //prior to executing the application that uses the source.
+                //Execute this sample a second time to use the new source.
+                EventLog.CreateEventSource("IntegracjaB2B", "IntegracjaB2Blog");
+
+            }
+
+
+       eventLog = new EventLog();
+            eventLog.Source = "IntegracjaB2B";
+
+            this.comarchOptimaImportOrderSTA();
         }
 
+        public string getOrdersGate()
+        {
+           if (getDevMode())
+           return Properties.Settings.Default.ordersGateDev;
+           else
+           return Properties.Settings.Default.ordersGate;
+           
+        }
+
+        public string getApiUrl()
+        {
+            if (getDevMode())
+                return Properties.Settings.Default.apiUrlDev;
+            else
+                return Properties.Settings.Default.apiUrl;
+
+        }
+
+        public string getapiKey()
+        {
+            if (getDevMode())
+                return Properties.Settings.Default.apiKeyDev;
+            else
+                return Properties.Settings.Default.apiKeyDev;
+        }
+
+        public bool getDevMode()
+        {
+            if (Properties.Settings.Default.devMode)
+                return true;
+            else
+                return false;
+        }
 
     }
 }

@@ -18,7 +18,7 @@
       <Value Profile="(Default)">https://www.majsterkowanie.eu/modules/crud/ordersxml.php</Value>
     </Setting>
     <Setting Name="serverName" Type="System.String" Scope="Application">
-      <Value Profile="(Default)">MSSQLNEW</Value>
+      <Value Profile="(Default)">DESKTOP-U9BTSEU\OPTIMA</Value>
     </Setting>
     <Setting Name="dataBaseName" Type="System.String" Scope="Application">
       <Value Profile="(Default)">CDN_Tomax</Value>
@@ -49,6 +49,24 @@
     </Setting>
     <Setting Name="Interval" Type="System.String" Scope="Application">
       <Value Profile="(Default)">1</Value>
+    </Setting>
+    <Setting Name="ordersGateDev" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://sandbox.majsterkowanie.eu/modules/crud/ordersxml.php</Value>
+    </Setting>
+    <Setting Name="apiUrlDev" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">https://www.majsterkowanie.eu/api/</Value>
+    </Setting>
+    <Setting Name="apiKeyDev" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">SA5DK6NTFPUEMQZMWCNP4QI26U1IEZ51</Value>
+    </Setting>
+    <Setting Name="devMode" Type="System.Boolean" Scope="Application">
+      <Value Profile="(Default)">True</Value>
+    </Setting>
+    <Setting Name="nip24Id" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">1HbIs4eXoTou</Value>
+    </Setting>
+    <Setting Name="nip24Key" Type="System.String" Scope="Application">
+      <Value Profile="(Default)">liPwxftQRSPb</Value>
     </Setting>
   </Settings>
 </SettingsFile>
