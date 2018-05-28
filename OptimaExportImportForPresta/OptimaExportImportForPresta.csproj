@@ -208,5 +208,11 @@
   <ItemGroup>
     <WCFMetadata Include="Connected Services\" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\nip24Library\nip24Library.csproj">
+      <Project>{b7a1c7eb-ffb5-4c39-ad79-15cbc44fc466}</Project>
+      <Name>nip24Library</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
