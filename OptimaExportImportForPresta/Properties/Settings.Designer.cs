@@ -220,5 +220,41 @@ namespace OptimaExportImportForPresta.Properties {
                 return ((string)(this["nip24Key"]));
             }
         }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("DESKTOP-EA662KQ\\OPTIMA")]
+        public string serverNameDev {
+            get {
+                return ((string)(this["serverNameDev"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("ZXASqw122")]
+        public string secretDbDev {
+            get {
+                return ((string)(this["secretDbDev"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("93441")]
+        public string twrIdExceptionDev {
+            get {
+                return ((string)(this["twrIdExceptionDev"]));
+            }
+        }
+        
+        [global::System.Configuration.ApplicationScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("93440")]
+        public string twrIdCarrierDev {
+            get {
+                return ((string)(this["twrIdCarrierDev"]));
+            }
+        }
     }
 }

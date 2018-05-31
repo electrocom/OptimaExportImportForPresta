@@ -17,8 +17,63 @@ using System.Collections.Specialized;
 using System.Data.SqlClient;
 using System.Text.RegularExpressions;
 using NIP24;
+
 namespace OptimaExportImportForPresta
 {
+    struct NazwaFirmy
+    {
+        public NazwaFirmy(string NazwaPelna )
+        {
+            Nazwa1 = null;
+            Nazwa2 = null;
+            Nazwa3 = null;
+
+
+            if (NazwaPelna.Length<50)
+               Nazwa1 = NazwaPelna.Substring(0, NazwaPelna.Length);
+
+            if (NazwaPelna.Length >= 50)
+                if (NazwaPelna.Length < 100)
+                    Nazwa2 = NazwaPelna.Substring(50, NazwaPelna.Length);
+                else
+                {
+                    Nazwa2 = NazwaPelna.Substring(50, 99);
+                    Nazwa3 = NazwaPelna.Substring(99, NazwaPelna.Length);
+                }
+        }
+
+        public string Nazwa1;
+        public string Nazwa2;
+        public string Nazwa3;
+    }
+
+    class  NazwaKotrahenta
+    {
+        public NazwaKotrahenta( string company,string firstname="",string lastname="",string nip="")
+        {
+
+            //Ustalanie nazwy kontahenta
+            if (company.Length > 2)
+            {
+                NazwaFirmy nazwaFirmy = new NazwaFirmy(company);
+                Nazwa1 = nazwaFirmy.Nazwa1;
+                Nazwa2 = nazwaFirmy.Nazwa2;
+                Nazwa3 = nazwaFirmy.Nazwa3;
+            }
+            else
+            {
+                Nazwa1 = firstname + " " + lastname;
+                Nazwa2 = "";
+                Nazwa3 = "";
+            }
+        }
+
+        public string Nazwa1;
+        public string Nazwa2;
+        public string Nazwa3;
+
+    }
+
     class ComarchOptimaImportOrder
     {
         static EventLog eventLog;
@@ -26,12 +81,15 @@ namespace OptimaExportImportForPresta
         static ILogin Login = null;
         static string connectionString;
         static XmlNode curOrderXML;
+        Kontrahent knt;
+
+        static string validNip;
         public  ComarchOptimaImportOrder()
         {
-            connectionString = "Data Source=" + Properties.Settings.Default.serverName + ";" +
+            connectionString = "Data Source=" + getServerName() + ";" +
                                                                 "Initial Catalog=" + Properties.Settings.Default.dataBaseName + ";" +
                                                                 "User id=" + Properties.Settings.Default.userName + ";" +
-                                                                "Password=" + Properties.Settings.Default.secret + ";";
+                                                                "Password=" + getSecretDb() + ";";
         }
         static protected bool LogowanieAutomatyczne(EventLog eventLog)
         {
@@ -40,7 +98,7 @@ namespace OptimaExportImportForPresta
             string Haslo = Properties.Settings.Default.erpPasswd;
             string Firma = Properties.Settings.Default.erpName;
             Environment.CurrentDirectory = Properties.Settings.Default.erpSrc;
-            Application.LockApp(256, 5000, null, null, null, null);
+            Application.LockApp(512, 50000, null, null, null, null);
             object[] hPar = new object[] {
                          0,  0,   0,  0,   0,   1,  0,    0,   0,   0,   0,   0,   0,  0,   1,   0,  0 ,0};	// do jakich modułów będzie logowanie
            /* Kolejno:  KP, KH, KHP, ST, FA, MAG, PK, PKXL, CRM, ANL, DET, BIU, SRW, ODB, KB, KBP, HAP  
@@ -129,7 +187,7 @@ namespace OptimaExportImportForPresta
                                 try
                                     {
                                        
-                                        Kontrahent knt;
+                                  
                                         XmlNode xmltmp = orderXML["address_invoice"]["address"];
                                         DefAtrybut defAtrybut = Sesja.CreateObject("CDN.DefAtrybuty").Item("DeA_Kod='B2BID'"); //Pobranie id atrybutu
                                         string KnA_DeAId = "KnA_DeAId=" + defAtrybut.ID.ToString() + "";
@@ -166,7 +224,8 @@ namespace OptimaExportImportForPresta
                                                 knt.Akronim = ZbudujAkronim(curOrderXML); ;
                                                 knt.Rodzaj_Odbiorca = 1;
                                                 knt.Rodzaj_Dostawca = 0;
-                                                PobierzDaneDoFaktury(xmlBilling,knt);
+                                         
+                                                PobierzDaneDoFaktury();
                                                 KntAtrybut b2bId = knt.Atrybuty.AddNew();
                                                 b2bId.DefAtrybut = defAtrybut;
                                                 b2bId.ROSaveMode = 1;
@@ -207,18 +266,23 @@ namespace OptimaExportImportForPresta
                                         dok.Podmiot = knt;
                                        
                                         dok.WalutaSymbol = "PLN";
-                                    //  dok.OdbEmail = xmlShipping["Email"].InnerText;
-                            
-                                          dok.TypNB = 2; /* 1 - Licz od netto, 2 -licz od brutto*/
-                                          dok.OdbTelefon = xmlShipping["phone"].InnerText;
-                                        dok.OdbNazwa1 = xmlShipping["company"].InnerText;
-                                        dok.OdbNazwa2 = xmlShipping["firstname"].InnerText + " " + xmlShipping["lastname"].InnerText;
-                                        dok.OdbAdres.Ulica = xmlShipping["address1"].InnerText;
-                                        dok.OdbAdres.NrDomu = xmlShipping["address2"].InnerText;
-                                        //dok.OdbAdres.NrLokalu = xmlShipping["Street3"].InnerText;
-                                        dok.OdbAdres.Miasto = xmlShipping["city"].InnerText;
-                                        dok.OdbAdres.KodPocztowy = xmlShipping["postcode"].InnerText;
-                                        dok.OdbAdres.Kraj = "Polska";
+                              
+                                    dok.OdbEmail = xmlCustomer["email"].InnerText;
+                                    dok.TypNB = 2; /* 1 - Licz od netto, 2 -licz od brutto*/
+                               
+
+
+
+
+                                    dok.OdbNazwa1 = ZbudujNazwe(xmlShipping["company"].InnerText, xmlShipping["firstname"].InnerText, xmlShipping["lastname"].InnerText).Nazwa1;
+                                    dok.OdbNazwa2 = ZbudujNazwe(xmlShipping["company"].InnerText, xmlShipping["firstname"].InnerText, xmlShipping["lastname"].InnerText).Nazwa2; 
+                                    dok.OdbNazwa3 = ZbudujNazwe(xmlShipping["company"].InnerText, xmlShipping["firstname"].InnerText, xmlShipping["lastname"].InnerText).Nazwa3;
+                                    dok.OdbAdres.Ulica = xmlShipping["address1"].InnerText;
+                                    dok.OdbAdres.NrDomu = xmlShipping["address2"].InnerText;
+                                    dok.OdbTelefon = xmlShipping["phone"].InnerText ?? xmlShipping["phone_mobile"].InnerText;
+                                    dok.OdbAdres.Miasto = xmlShipping["city"].InnerText;
+                                    dok.OdbAdres.KodPocztowy = xmlShipping["postcode"].InnerText;
+                                    dok.OdbAdres.Kraj = "Polska";
                                         //dok.OdbAdres.Wojewodztwo = xmlShipping["Region"].InnerText; 
                                        DokAtrybut dostawa = dok.Atrybuty.AddNew();
                                         dostawa.Kod = "METODADOSTAWY";
@@ -273,7 +337,7 @@ namespace OptimaExportImportForPresta
                                                  }
                                             else
                                             {
-                                            pozycja.TowarID = Convert.ToInt32(Properties.Settings.Default.twrIdException);
+                                            pozycja.TowarID = Convert.ToInt32(getTwrIdException());
                                             }
 
                                                 var product_price = orderXmlElement["unit_price_tax_incl"].InnerText.Replace(".", ",");
@@ -283,7 +347,7 @@ namespace OptimaExportImportForPresta
                                         }
 
                                     ElementHaMag carrier = pozycje.AddNew();
-                                    carrier.TowarID = Convert.ToInt32(Properties.Settings.Default.twrIdCarrier); ;
+                                    carrier.TowarID = Convert.ToInt32(getTwrIdCarrier()); 
                                     var total_shipping = orderXML["total_shipping"].InnerText.Replace(".", ",");
                                     carrier.CenaT = Convert.ToDecimal(total_shipping);
                                     carrier.IloscJM = Convert.ToDouble(1);
@@ -335,11 +399,19 @@ namespace OptimaExportImportForPresta
 
         }
 
-        public void PobierzDaneDoFakturyGus( Kontrahent knt)
+        public bool PobierzDaneDoFakturyGus( )
         {
-            string nip = knt.Nip;
+            string nip;
+            try {
+                if (!isValidNip())
+                    return false;
+
+            nip = getValidNip();
+                   
+
             NIP24Client nip24 = new NIP24Client(Properties.Settings.Default.nip24Id, Properties.Settings.Default.nip24Key);
             AccountStatus account = nip24.GetAccountStatus();
+
             if (account != null)
             {
                 eventLog.WriteEntry("Nip24 konto użytkownika: " + account + Environment.NewLine, EventLogEntryType.Information, 0);
@@ -377,86 +449,109 @@ namespace OptimaExportImportForPresta
 
             if (invoice != null)
             {
-               // Console.WriteLine("Nazwa: " + invoice.Name);
-                knt.Nazwa1 = invoice.Name;
-                knt.Adres.KodPocztowy = invoice.PostCode;
-                knt.Adres.Miasto = invoice.PostCity;
+            
+                   
+                    knt.Nazwa1 = ZbudujNazwe(invoice.Name).Nazwa1;
+                    knt.Nazwa2 = ZbudujNazwe(invoice.Name).Nazwa2;
+                    knt.Nazwa3 = ZbudujNazwe(invoice.Name).Nazwa3;
+
+                    knt.Adres.KodPocztowy = invoice.PostCode;
+                knt.Adres.Miasto = invoice.City;
                 knt.Adres.Ulica = invoice.Street;
                 knt.Adres.NrDomu = invoice.StreetNumber;
                 knt.Adres.NrLokalu = invoice.HouseNumber;
+                knt.Adres.Poczta = invoice.PostCity;
+                knt.Nip = nip;
+                
+                return true;
+
                             }
             else
             {
                 // Console.WriteLine("Błąd: " + nip24.LastError);
                 eventLog.WriteEntry("Błąd pobierania danych do faktury z GUS: " + nip24.LastError + Environment.NewLine, EventLogEntryType.Error, 0);
+                return false;
             }
-
-           
+            }
+            catch
+            {
+                return false;
+            }
+            
 
         }
 
-        public  void ZbudujDaneDoFaktury(XmlNode xmlBilling, Kontrahent knt)
+        public  void PobierzDaneDoFakturyXml()
         {
-            //Ustalanie nazwy kontahenta
-            if (xmlBilling["company"].InnerText.Length > 2)
-            {
-                knt.Nazwa1 = xmlBilling["company"].InnerText;
-                knt.Nazwa2 = xmlBilling["firstname"].InnerText + " " + xmlBilling["lastname"].InnerText;
-
-            }
-            else
-            {
-                knt.Nazwa1 = xmlBilling["firstname"].InnerText + " " + xmlBilling["lastname"].InnerText;
-            }
-
+            XmlNode xmlBilling  = curOrderXML.SelectSingleNode("address_invoice")["address"];
+            XmlNode xmlCustomer = curOrderXML.SelectSingleNode("customer");
             knt.Adres.Ulica = xmlBilling["address1"].InnerText;
             knt.Adres.NrDomu = xmlBilling["address2"].InnerText;
             knt.Adres.Miasto = xmlBilling["city"].InnerText;
             knt.Adres.KodPocztowy = xmlBilling["postcode"].InnerText;
             knt.Adres.Kraj = "Polska";
 
-            //  if (xmlCustomer["email"].InnerText.Length > 2)
-            //  knt.Email = xmlCustomer["email"].InnerText;
-
-            if (xmlBilling["phone"].InnerText.Length > 5)
-                knt.Telefon = xmlBilling["phone"].InnerText;
-
-            if (xmlBilling["company"].InnerText.Length > 0)
-                knt.Nazwa1 = xmlBilling["company"].InnerText;
 
             if (xmlBilling["address1"].InnerText.Length > 0)
             {
                 knt.Adres.Ulica = xmlBilling["address1"].InnerText;
-            }
-
-            knt.Adres.Kraj = "Polska";
-            if (xmlBilling["postcode"].InnerText.Length > 0)
-                knt.Adres.KodPocztowy = xmlBilling["postcode"].InnerText;
-            if (xmlBilling["city"].InnerText.Length > 0)
+            }  
                 knt.Adres.Miasto = xmlBilling["city"].InnerText;
 
         }
-        public void PobierzDaneDoFaktury(XmlNode xmlBilling, Kontrahent knt)
-        {
-            var nip = NIPClean(xmlBilling["vat_number"].InnerText);
 
-            if (xmlBilling["company"].InnerText.Length > 2)
+        public void PobierzDaneDoFaktury()
+        {
+            XmlNode xmlBilling = curOrderXML.SelectSingleNode("address_invoice")["address"];
+            XmlNode xmlCustomer = curOrderXML.SelectSingleNode("customer");
+                     
+            if ( !PobierzDaneDoFakturyGus())
             {
-                if (NIPValidate(nip))
-                {
-                    knt.Nip = nip;
-                    PobierzDaneDoFakturyGus(knt);
-                }
-                else
-                {
-                    eventLog.WriteEntry("Błędny nip firmy: " + xmlBilling["vat_number"].InnerText + Environment.NewLine, EventLogEntryType.Warning, 0);
-                    ZbudujDaneDoFaktury(xmlBilling, knt);
-                }
+              //  eventLog.WriteEntry("Błędny nip firmy: " + xmlBilling["vat_number"].InnerText + Environment.NewLine, EventLogEntryType.Warning, 0);
+                PobierzDaneDoFakturyXml();
             }
-            else
+
+            if (xmlBilling["phone"].InnerText.Length > 5)
+                knt.Telefon = xmlBilling["phone"].InnerText;
+
+            if (xmlBilling["phone_mobile"].InnerText.Length > 5)
+                knt.Telefon2 = xmlBilling["phone_mobile"].InnerText;
+
+            if (xmlCustomer["email"].InnerText.Length > 3)
+                knt.Email = xmlCustomer["email"].InnerText;
+
+
+        }
+
+        public bool CzyFirma()
+        {
+            bool tmp = String.IsNullOrEmpty(getValidNip());
+            XmlNode xmlBilling = curOrderXML.SelectSingleNode("address_invoice")["address"];
+
+
+            if (xmlBilling["company"].InnerText.Length > 5 || isValidNip())
             {
-                ZbudujDaneDoFaktury(xmlBilling, knt);
+                return true;
             }
+                return false;
+        }
+
+        public NazwaFirmy ZbudujNazwe(string company,string firstname=null, string lastname=null)
+        {
+            NazwaFirmy nazwaFirmy;
+            if (String.IsNullOrEmpty(company))
+            {
+                nazwaFirmy = new NazwaFirmy(firstname + " " + lastname);
+                
+
+            }else
+            {
+                 nazwaFirmy = new NazwaFirmy(company);
+             
+            }
+            
+         
+            return nazwaFirmy;
         }
         public string ZbudujAkronim(XmlNode orderXML)
         {
@@ -556,13 +651,8 @@ namespace OptimaExportImportForPresta
         {
             // Create the source, if it does not already exist.
             if (!EventLog.SourceExists("IntegracjaB2B"))
-            {
-                //An event log source should not be created and immediately used.
-                //There is a latency time to enable the source, it should be created
-                //prior to executing the application that uses the source.
-                //Execute this sample a second time to use the new source.
+            {               
                 EventLog.CreateEventSource("IntegracjaB2B", "IntegracjaB2Blog");
-
             }
 
 
@@ -595,9 +685,39 @@ namespace OptimaExportImportForPresta
             if (getDevMode())
                 return Properties.Settings.Default.apiKeyDev;
             else
-                return Properties.Settings.Default.apiKeyDev;
+                return Properties.Settings.Default.apiKey;
+        }
+        public string getServerName() {
+            if (getDevMode())
+                return  Properties.Settings.Default.serverNameDev;
+            else
+                return Properties.Settings.Default.serverName;
+
+           
+                }
+        public string getSecretDb()
+        {
+            if (getDevMode())
+                return Properties.Settings.Default.secretDbDev;
+            else
+                return Properties.Settings.Default.secret;
         }
 
+        public string getTwrIdException()
+        {
+            if (getDevMode())
+                return Properties.Settings.Default.twrIdExceptionDev;
+            else
+                return Properties.Settings.Default.twrIdException;
+        }
+
+        public string getTwrIdCarrier()
+        {
+            if (getDevMode())
+                return Properties.Settings.Default.twrIdCarrierDev;
+            else
+                return Properties.Settings.Default.twrIdCarrier;
+        }
         public bool getDevMode()
         {
             if (Properties.Settings.Default.devMode)
@@ -606,5 +726,19 @@ namespace OptimaExportImportForPresta
                 return false;
         }
 
+        public string getValidNip()
+        {
+            string nip;
+            XmlNode xmlBilling = curOrderXML.SelectSingleNode("address_invoice")["address"];
+            nip = NIPClean(xmlBilling["vat_number"].InnerText);
+            return NIPValidate(nip) ? nip : null;
+
+        }
+
+        public bool isValidNip()
+        {
+            return !String.IsNullOrEmpty(getValidNip());
+        }
+            
     }
 }
