@@ -20,59 +20,56 @@ using NIP24;
 
 namespace OptimaExportImportForPresta
 {
-    struct NazwaFirmy
+     class  NazwaFirmy
     {
-        public NazwaFirmy(string NazwaPelna )
-        {
-            Nazwa1 = null;
-            Nazwa2 = null;
-            Nazwa3 = null;
-
-
-            if (NazwaPelna.Length<50)
-               Nazwa1 = NazwaPelna.Substring(0, NazwaPelna.Length);
-
-            if (NazwaPelna.Length >= 50)
-                if (NazwaPelna.Length < 100)
-                    Nazwa2 = NazwaPelna.Substring(50, NazwaPelna.Length);
-                else
-                {
-                    Nazwa2 = NazwaPelna.Substring(50, 99);
-                    Nazwa3 = NazwaPelna.Substring(99, NazwaPelna.Length);
-                }
-        }
-
         public string Nazwa1;
         public string Nazwa2;
         public string Nazwa3;
-    }
-
-    class  NazwaKotrahenta
-    {
-        public NazwaKotrahenta( string company,string firstname="",string lastname="",string nip="")
-        {
-
-            //Ustalanie nazwy kontahenta
-            if (company.Length > 2)
+        public  NazwaFirmy(string NazwaPelna )
+        {try
             {
-                NazwaFirmy nazwaFirmy = new NazwaFirmy(company);
-                Nazwa1 = nazwaFirmy.Nazwa1;
-                Nazwa2 = nazwaFirmy.Nazwa2;
-                Nazwa3 = nazwaFirmy.Nazwa3;
+                Nazwa1 = null;
+                Nazwa2 = null;
+                Nazwa3 = null;
+                
+
+                var tmp = SplitIntoParts(NazwaPelna, 50);
+                Nazwa1 = tmp.Count > 0 ? tmp[0] : string.Empty;
+                Nazwa2 = tmp.Count > 1 ? tmp[1] : string.Empty;
+                Nazwa3 = tmp.Count > 2 ? tmp[2] : string.Empty;
+
             }
-            else
+            catch(Exception ex)
             {
-                Nazwa1 = firstname + " " + lastname;
-                Nazwa2 = "";
-                Nazwa3 = "";
+                Nazwa1 = null;
+                Nazwa2 = null;
+                Nazwa3 = null;
+
             }
+
+
         }
 
-        public string Nazwa1;
-        public string Nazwa2;
-        public string Nazwa3;
+        public static List<string> SplitIntoParts( string input, int partLength)
+        {
+            var result = new List<string>();
+            int partIndex = 0;
+            int length = input.Length;
+            while (length > 0)
+            {
+                var tempPartLength = length >= partLength ? partLength : length;
+                var part = input.Substring(partIndex * partLength, tempPartLength);
+                result.Add(part);
+                partIndex++;
+                length -= partLength;
+            }
+            return result;
+        }
+
 
     }
+
+    
 
     class ComarchOptimaImportOrder
     {
@@ -80,10 +77,13 @@ namespace OptimaExportImportForPresta
         static IApplication Application = null;
         static ILogin Login = null;
         static string connectionString;
-        static XmlNode curOrderXML;
+         XmlNode curOrderXML;
         Kontrahent knt;
+        string orderId = "";
 
         static string validNip;
+
+    
         public  ComarchOptimaImportOrder()
         {
             connectionString = "Data Source=" + getServerName() + ";" +
@@ -135,7 +135,7 @@ namespace OptimaExportImportForPresta
 
             try
             {
-                string orderId = "";
+                
                 string reference = "";
                 WebClient client = new WebClient();
                 string prestaResponse = "";
@@ -162,7 +162,7 @@ namespace OptimaExportImportForPresta
                         bool error = true;
                         try
                         {
-                            eventLog.WriteEntry("Rozpoczynam import zamówień:" + Environment.NewLine , EventLogEntryType.Information, 0);
+                            //eventLog.WriteEntry("Rozpoczynam import zamówień:" + Environment.NewLine , EventLogEntryType.Information, 0);
 
                             Dictionary<string, List<XmlNode>> splitedOrder = new Dictionary<string, List<XmlNode>>();
                             orderId = orderXML["id"].InnerText;
@@ -231,6 +231,7 @@ namespace OptimaExportImportForPresta
                                                 b2bId.ROSaveMode = 1;
                                                 b2bId.Wartosc = xmlBilling["id"].InnerText;
                                                 knt.Kategoria = Sesja.CreateObject("CDN.Kategorie").Item("Kat_KodOgolny='ALLEGRO MAJSTERKOWAN'");
+                                                knt.Grupa = "ALLEGRO MAJSTERKOWAN";
                                                 Sesja.Save();
                                                 podmiotId = knt.ID;
                                              }
@@ -301,16 +302,15 @@ namespace OptimaExportImportForPresta
                                     Kategoria kategoria;
                                     if (orderXML["module"].InnerText == "allegro")
                                     {
-                                        kategoria = Sesja.CreateObject("CDN.Kategorie").Item("Kat_KodOgolny='ALLEGRO MAJSTERKOWAN'");
-
+                                        knt.Kategoria = Sesja.CreateObject("CDN.Kategorie").Item("Kat_KodOgolny='ALLEGRO MAJSTERKOWAN'");
+                                        knt.Grupa = "ALLEGRO MAJSTERKOWAN";
                                     }
                                     else
-                                    {
-                                        kategoria = Sesja.CreateObject("CDN.Kategorie").Item("Kat_KodOgolny='MAJSTERKOWANIE.EU'");
-                                      
+                                    {                                    
+                                        knt.Kategoria = Sesja.CreateObject("CDN.Kategorie").Item("Kat_KodOgolny='MAJSTERKOWANIE.EU'");
+                                        knt.Grupa = "MAJSTERKOWANIE.EU";
                                     }
-                                    dok.Kategoria = kategoria;
-
+                                    
 
 
 
@@ -359,7 +359,9 @@ namespace OptimaExportImportForPresta
 
 
                                     error = false;
-                                        Sesja.Save();
+                                    Sesja.Save();
+                                    eventLog.WriteEntry("Pomyślnie pobrano zamówienie nr:" + orderId + Environment.NewLine, EventLogEntryType.Information, 0);
+
                                     OznaczJakoPobrane(Convert.ToInt32(orderXML["id_optimaexportorders"].InnerText), Convert.ToInt32(orderXML["id"].InnerText)); 
                                     }
                                     catch (Exception exDokDef)
@@ -414,7 +416,7 @@ namespace OptimaExportImportForPresta
 
             if (account != null)
             {
-                eventLog.WriteEntry("Nip24 konto użytkownika: " + account + Environment.NewLine, EventLogEntryType.Information, 0);
+               // eventLog.WriteEntry("Nip24 konto użytkownika: " + account + Environment.NewLine, EventLogEntryType.Information, 0);
             }
             else
             {
@@ -422,30 +424,11 @@ namespace OptimaExportImportForPresta
             }
 
 
-            // Sprawdzenie statusu fimy
-            bool active = nip24.IsActive(Number.NIP, nip);
+           
 
-            if (active)
-            {
-                Console.WriteLine("Firma prowadzi aktywną działalność");
-                eventLog.WriteEntry("Firma prowadzi aktywną działalność " + Environment.NewLine, EventLogEntryType.Information, 0);
-            }
-            else
-            {
-                if (String.IsNullOrEmpty(nip24.LastError))
-                {
-                    eventLog.WriteEntry("Firma zawiesiła lub zakończyła działalność " + Environment.NewLine, EventLogEntryType.Warning, 0);
-                    //   Console.WriteLine("Firma zawiesiła lub zakończyła działalność");
-                }
-                else
-                {
-                    eventLog.WriteEntry("Błąd: " + nip24.LastError + Environment.NewLine, EventLogEntryType.Error, 0);
-                    //Console.WriteLine("Błąd: " + nip24.LastError);
-                }
-            }
+           
 
-
-            InvoiceData invoice = nip24.GetInvoiceData(Number.NIP, nip, false);
+                InvoiceData invoice = nip24.GetInvoiceData(Number.NIP, nip, false);
 
             if (invoice != null)
             {
@@ -491,12 +474,12 @@ namespace OptimaExportImportForPresta
             knt.Adres.KodPocztowy = xmlBilling["postcode"].InnerText;
             knt.Adres.Kraj = "Polska";
 
+            knt.Nazwa1 = ZbudujNazwe(null, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa1;
+            knt.Nazwa2 = ZbudujNazwe(null, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa2;
+            knt.Nazwa3 = ZbudujNazwe(null, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa3;
 
-            if (xmlBilling["address1"].InnerText.Length > 0)
-            {
-                knt.Adres.Ulica = xmlBilling["address1"].InnerText;
-            }  
-                knt.Adres.Miasto = xmlBilling["city"].InnerText;
+            knt.Finalny = 1;
+            knt.PodatekVAT = 0;
 
         }
 
@@ -556,10 +539,12 @@ namespace OptimaExportImportForPresta
         public string ZbudujAkronim(XmlNode orderXML)
         {
             string akronim="";
+            string allegro = "";
             XmlNode xmlBilling = orderXML.SelectSingleNode("address_invoice")["address"];        
             XmlNode xmlCustomer = orderXML.SelectSingleNode("customer");
-         
-            string allegro = xmlCustomer["note"].InnerText.Split(':')[1].Trim();
+        
+            string[] tmp= xmlCustomer["note"].InnerText.Split(':');
+            allegro = (tmp.Length == 2) ? tmp[1] : "";
 
             akronim = "B2B_" + xmlBilling["id"].InnerText+"_"+ allegro + "_";
             if (xmlBilling["company"].InnerText.Length > 0)
