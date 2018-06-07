@@ -280,6 +280,8 @@ namespace OptimaExportImportForPresta
                                     dok.OdbNazwa3 = ZbudujNazwe(xmlShipping["company"].InnerText, xmlShipping["firstname"].InnerText, xmlShipping["lastname"].InnerText).Nazwa3;
                                     dok.OdbAdres.Ulica = xmlShipping["address1"].InnerText;
                                     dok.OdbAdres.NrDomu = xmlShipping["address2"].InnerText;
+                                    dok.OdbAdres.NrLokalu = "";
+                                    dok.OdbAdres.Poczta = "";
                                     dok.OdbTelefon = xmlShipping["phone"].InnerText ?? xmlShipping["phone_mobile"].InnerText;
                                     dok.OdbAdres.Miasto = xmlShipping["city"].InnerText;
                                     dok.OdbAdres.KodPocztowy = xmlShipping["postcode"].InnerText;
