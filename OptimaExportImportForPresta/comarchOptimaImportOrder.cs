@@ -474,9 +474,9 @@ namespace OptimaExportImportForPresta
             knt.Adres.KodPocztowy = xmlBilling["postcode"].InnerText;
             knt.Adres.Kraj = "Polska";
 
-            knt.Nazwa1 = ZbudujNazwe(null, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa1;
-            knt.Nazwa2 = ZbudujNazwe(null, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa2;
-            knt.Nazwa3 = ZbudujNazwe(null, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa3;
+            knt.Nazwa1 = ZbudujNazwe(xmlBilling["company"].InnerText, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa1;
+            knt.Nazwa2 = ZbudujNazwe(xmlBilling["company"].InnerText, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa2;
+            knt.Nazwa3 = ZbudujNazwe(xmlBilling["company"].InnerText, xmlBilling["firstname"].InnerText, xmlBilling["lastname"].InnerText).Nazwa3;
 
             knt.Finalny = 1;
             knt.PodatekVAT = 0;
@@ -487,53 +487,90 @@ namespace OptimaExportImportForPresta
         {
             XmlNode xmlBilling = curOrderXML.SelectSingleNode("address_invoice")["address"];
             XmlNode xmlCustomer = curOrderXML.SelectSingleNode("customer");
-                     
+            XmlNode xmlShipping = curOrderXML.SelectSingleNode("address_delivery")["address"];
             if ( !PobierzDaneDoFakturyGus())
             {
               //  eventLog.WriteEntry("Błędny nip firmy: " + xmlBilling["vat_number"].InnerText + Environment.NewLine, EventLogEntryType.Warning, 0);
                 PobierzDaneDoFakturyXml();
             }
 
-            if (xmlBilling["phone"].InnerText.Length > 5)
-                knt.Telefon = xmlBilling["phone"].InnerText;
-
-            if (xmlBilling["phone_mobile"].InnerText.Length > 5)
-                knt.Telefon2 = xmlBilling["phone_mobile"].InnerText;
-
+            knt.Telefon = PobierzTelefon();
+            knt.Telefon2 = PobierzTelefon(2);
+            
             if (xmlCustomer["email"].InnerText.Length > 3)
                 knt.Email = xmlCustomer["email"].InnerText;
-
-
         }
 
         public bool CzyFirma()
         {
-            bool tmp = String.IsNullOrEmpty(getValidNip());
-            XmlNode xmlBilling = curOrderXML.SelectSingleNode("address_invoice")["address"];
-
-
-            if (xmlBilling["company"].InnerText.Length > 5 || isValidNip())
+           
+            if (isValidNip())
             {
                 return true;
             }
                 return false;
         }
 
+        public string PobierzTelefon(int nr=1 )
+        {
+            XmlNode xmlBilling = curOrderXML.SelectSingleNode("address_invoice")["address"];       
+            XmlNode xmlShipping = curOrderXML.SelectSingleNode("address_delivery")["address"];
+            
+            string tmp1 = "";
+            string tmp2 = "";
+            string telefon = "";
+            tmp1=ZbudujTelefon(xmlBilling["phone_mobile"].InnerText, xmlShipping["phone_mobile"].InnerText);
+            tmp2 = ZbudujTelefon(xmlBilling["phone"].InnerText, xmlShipping["phone"].InnerText);
+
+            if (nr == 1) {
+                if (tmp1.Length > 4)
+                    return tmp1;
+                else
+                    return tmp2;
+            }
+
+            if (nr == 2)
+            {
+                if (tmp1 != tmp2)
+                    return tmp2;
+                else
+                    return "";
+            }
+
+                return telefon;
+        }
+
+        public string ZbudujTelefon(string tel1, string tel2)
+        {
+            string telefon = "";
+            if (tel1 != tel2)
+            {
+                if (tel1.Length > 4)
+                    telefon = tel1;
+                if (tel2.Length > 4)
+                {
+                    if (telefon.Length > 4)
+                        telefon += ", ";
+
+                      telefon += tel2;
+                    
+                }
+                    
+            }
+            else
+            {
+                telefon = tel1;
+            }
+            return telefon;         
+        }
+
         public NazwaFirmy ZbudujNazwe(string company,string firstname=null, string lastname=null)
         {
             NazwaFirmy nazwaFirmy;
-            if (String.IsNullOrEmpty(company))
-            {
-                nazwaFirmy = new NazwaFirmy(firstname + " " + lastname);
-                
-
-            }else
-            {
-                 nazwaFirmy = new NazwaFirmy(company);
-             
-            }
-            
-         
+            if(CzyFirma())
+            nazwaFirmy = new NazwaFirmy(company);
+            else
+            nazwaFirmy = new NazwaFirmy(company + " " + firstname + " " + lastname);
             return nazwaFirmy;
         }
         public string ZbudujAkronim(XmlNode orderXML)
