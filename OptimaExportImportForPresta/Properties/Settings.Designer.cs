@@ -196,7 +196,7 @@ namespace OptimaExportImportForPresta.Properties {
         
         [global::System.Configuration.ApplicationScopedSettingAttribute()]
         [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
-        [global::System.Configuration.DefaultSettingValueAttribute("True")]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
         public bool devMode {
             get {
                 return ((bool)(this["devMode"]));
